@@ -1,4 +1,6 @@
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useFocusEffect } from '@react-navigation/native'
 
 import {
   Container,
@@ -8,6 +10,7 @@ import {
   User,
   UserGreeling,
   UserName,
+  LogoutButton,
   Icon,
   UserWrapper,
   HighlightCards,
@@ -19,58 +22,54 @@ import {
 import { HighlightCard } from '../components/HighlightCard'
 import { TransactonCard, TansactionCardProps } from '../components/TransactionCarde'
 
-const data: DataListProps[] = [
-  {
-    id: '1',
-    type: 'positive',
-    title: 'Desenvolvimento de site',
-    amount:'R$ 12.000,00', 
-    category:{
-      name: 'Venda',
-      icon: 'dollar-sign'
-    },
-    date: '13/04/2020'
-  },
-  {
-    id: '2',
-    type: 'negative',
-    title: 'Hamburgueria Pizzy',
-    amount:'R$ 59,00',
-    category:{
-      name: 'Alimentação',
-      icon: 'coffee'
-    },
-    date: '10/04/2020'
-  },
-  {
-    id: '3',
-    type: 'negative',
-    title: 'Aluguel do apartamento',
-    amount:'R$ 1.200,00',
-    category:{
-      name: 'Casa',
-      icon: 'shopping-bag'
-    },
-    date: '27/03/2020'
-  },
-  {
-    id: '4',
-    type: 'positive',
-    title: 'Computador',
-    amount:'R$ 5.400,00',
-    category:{
-      name: 'Vendas',
-      icon: 'dollar-sign'
-    },
-    date: '15/04/2020'
-  },
-]
-
 export interface DataListProps extends TansactionCardProps {
   id: string
 }
 
 export function Dashboard() {
+  const [data, setData] = useState<DataListProps[]>([])
+
+  async function loadTransactions() {
+    const dataKey = '@gofinances:transaction'
+    const response = await AsyncStorage.getItem(dataKey)
+    const transactions = response ? JSON.parse(response) : []
+    const transactionsFormatted: DataListProps[] = transactions
+    .map((item: DataListProps) => {
+
+      const currency = Number(item.amount)
+      .toLocaleString('pt-BR', {
+          style: 'currency',
+        currency: 'BRL',
+      });
+      const amount = currency.replace('$', '$ ')
+      const date = Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }).format(new Date(item.date))
+
+      return {
+        id: item.id,
+        name: item.name,
+        amount,
+        type: item.type,
+        category: item.category,
+        date
+      }
+      
+    });
+
+    setData(transactionsFormatted)
+  }
+
+  useEffect(() => {
+    loadTransactions()
+  }, [])
+  
+  useFocusEffect(useCallback(() => {
+    loadTransactions()
+  },[]))
+
   return (
     <Container>
       <Header>
@@ -82,7 +81,9 @@ export function Dashboard() {
               <UserName>Charles</UserName>
             </User>
           </UserInfo>
-          <Icon name='power'/>
+          <LogoutButton onPress={() => {}}>
+            <Icon name='power' />
+          </LogoutButton>
         </UserWrapper>
       </Header>
 
